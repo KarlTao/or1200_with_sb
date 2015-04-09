@@ -5,6 +5,7 @@
 
 module or1200_dc_sb (
 		     clk, rst,
+		     dc_en, dmmu_en,
 		     //sb to LSU
 		     sbcpu_data_i, sbcpu_sel_i, sbcpu_addr_i,
 		     sbcpu_we_i, sbcpu_cycstb_i, //sbcpu_tag_i, 
@@ -23,6 +24,8 @@ module or1200_dc_sb (
 
    input clk;
    input rst;
+   input dc_en;
+   input dmmu_en;
    //sb to LSU
    input [31:0] sbcpu_data_i;
    input [3:0] 	sbcpu_sel_i;

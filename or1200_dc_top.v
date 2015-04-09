@@ -66,7 +66,7 @@ module or1200_dc_top(
 	dcsb_cab_o, dcsb_dat_i, dcsb_ack_i, dcsb_err_i,
 
 	// Internal i/f
-	dc_en,
+	dc_en, dmmu_en,
 	dcqmem_adr_i, dcqmem_cycstb_i, dcqmem_ci_i,
 	dcqmem_we_i, dcqmem_sel_i, dcqmem_tag_i, dcqmem_dat_i,
 	dcqmem_dat_o, dcqmem_ack_o, dcqmem_rty_o, dcqmem_err_o, dcqmem_tag_o,
@@ -112,7 +112,7 @@ input				dcsb_err_i;
 //
 // Internal I/F
 //
-input				dc_en;
+input				dc_en, dmmu_en;
 input	[31:0]			dcqmem_adr_i;
 input				dcqmem_cycstb_i;
 input				dcqmem_ci_i;
@@ -231,6 +231,8 @@ assign				mbist_so_o = mbist_tag_so;
    
    or1200_dc_sb or1200_dc_sb(
 	.clk(clk), .rst(rst),
+	//dc and dmmu enable signal, either one disabled means sb disabled
+	.dc_en(dc_en), .dmmu_en(dmmu_en),
 	//sb to LSU
 	.sbcpu_data_i(dcqmem_dat_i), .sbcpu_sel_i(dcqmem_sel_i),
 	.sbcpu_addr_i(dcqmem_adr_i), .sbcpu_we_i(dcqmem_we_i),

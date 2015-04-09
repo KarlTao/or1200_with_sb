@@ -769,6 +769,7 @@ or1200_dc_top or1200_dc_top(
 
 	// DC and QMEM
 	.dc_en(dc_en),
+	.dmmu_en(dmmu_en),
 	.dcqmem_adr_i(dcqmem_adr_qmem),
 	.dcqmem_cycstb_i(dcqmem_cycstb_qmem),
 	.dcqmem_ci_i(dcqmem_ci_qmem),
