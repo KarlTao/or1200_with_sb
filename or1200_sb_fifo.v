@@ -64,7 +64,8 @@
 `include "or1200_defines.v"
 
 module or1200_sb_fifo(
-	clk_i, rst_i, dat_i, wr_i, rd_i, dat_o, full_o, empty_o
+	clk_i, rst_i, dat_i, wr_i, rd_i, dat_o, full_o, empty_o,
+	sb_hit, hit_data_o
 );
 
    parameter dw = 32+4+32+1; //addr, sel, data, ci (no tag) //68;
@@ -94,6 +95,66 @@ reg	[fw-1:0]	rd_pntr;
 reg			empty_o;
 reg			full_o;
 
+
+//this part is for compare ld_addr and stores in the sb
+   output  reg 		sb_hit;
+   output reg [31:0] 	hit_data_o;
+   reg [fl-1:0] 	addr_hit;
+   reg [fl-1:0] 	rotated_addr_hit; //each bit means fifo entry addr match
+   reg [fw-1:0] 	hit_pntr;
+   reg [fl-1:0] 	mask;
+ 	 
+   always @ (*) begin
+   //each bit means that entry's addr matches ld_addr
+      if ((mem[0][63:32] == dat_i[63:32]) 
+	  && (mem[0][67:64] & dat_i[67:64] == dat_i[67:64])) addr_hit[0] = 1;
+      else addr_hit[0] = 0;
+      if ((mem[1][63:32] == dat_i[63:32])
+	  && (mem[1][67:64] & dat_i[67:64] == dat_i[67:64])) addr_hit[1] = 1;
+      else addr_hit[1] = 0;
+      if ((mem[2][63:32] == dat_i[63:32]) 
+	  && (mem[2][67:64] & dat_i[67:64] == dat_i[67:64])) addr_hit[2] = 1;
+      else addr_hit[2] = 0;
+      if ((mem[3][63:32] == dat_i[63:32])
+	  && (mem[3][67:64] & dat_i[67:64] == dat_i[67:64])) addr_hit[3] = 1;
+      else addr_hit[3] = 0;
+      
+      //generate mask according to cntr
+      case (cntr)
+	4: mask = 4'b1111;
+	3: mask = 4'b0111;
+	2: mask = 4'b0011;
+	1: mask = 4'b0001;
+	default : mask = 4'b0000;
+      endcase // case (cntr)
+      
+      //rotate to rd_pntr at lowest bit, and larger thatn wr_pntr bits to 0
+      rotated_addr_hit = ((addr_hit>>rd_pntr) + (addr_hit<<(fl-rd_pntr))) & mask; 
+
+      sb_hit = | rotated_addr_hit;
+
+      //decide the highest bit that is 1, 
+      if (rotated_addr_hit[3] == 1) begin
+	 hit_pntr = (3+rd_pntr)%fl;
+      end
+      else if (rotated_addr_hit[2] == 1) begin
+	 hit_pntr = (2+rd_pntr)%fl;
+      end
+      else if (rotated_addr_hit[1] == 1) begin
+	 hit_pntr = (1+rd_pntr)%fl;
+      end
+      else if (rotated_addr_hit[0] == 1) begin
+	 hit_pntr = (0+rd_pntr)%fl;
+      end
+      else begin
+	 hit_pntr = 0;
+      end
+      
+      hit_data_o = mem[hit_pntr][31:0];
+   end
+   
+   
+   
 
 always @ (*) begin //always output the head of fifo
    if (rst_i == `OR1200_RST_VALUE) begin
