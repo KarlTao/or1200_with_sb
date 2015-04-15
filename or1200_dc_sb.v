@@ -254,7 +254,7 @@ module or1200_dc_sb (
 		       next_state2 = STORING;
 		    end
 		 end
-		 else if (state == LOAD_MISS_SB) begin
+		 else if (isLoad & load_miss_sb & fifo_empty/*state == LOAD_MISS_SB*/) begin
 		    next_state2 = LOADING;
 		 end
 	         else if (~fifo_empty) begin
@@ -267,9 +267,14 @@ module or1200_dc_sb (
 	      STORING : begin
 		 sb_we_dc = 1;
 		 if(sbdc_ack_i) begin
-		    next_state2 = START;
 		    sb_cycstb_dc = 0;
 		    fifo_rd = 1;
+		    /*if (state == LOAD_MISS_SB) begin
+		       next_state2 = LOADING;
+		    end
+		    else begin*/
+		       next_state2 = START;
+		    //end
 		 end
 		 else begin
 		    next_state2 = STORING;

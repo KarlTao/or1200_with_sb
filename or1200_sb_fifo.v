@@ -97,6 +97,9 @@ reg			full_o;
 
 
 //this part is for compare ld_addr and stores in the sb
+//
+//
+//
    output  reg 		sb_hit;
    output reg [31:0] 	hit_data_o;
    reg [fl-1:0] 	addr_hit;
