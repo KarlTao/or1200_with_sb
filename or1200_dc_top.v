@@ -228,6 +228,7 @@ assign				mbist_so_o = mbist_tag_so;
    wire        sbdc_cycstb_o, sbdc_we_o;
    wire [3:0]  sbdc_sel_o; //, sbdc_tag_o, sbdc_tag_i;
    wire        sbdc_ci_o, sbdc_err_i;
+   wire        hit_sb;
    
    or1200_dc_sb or1200_dc_sb(
 	.clk(clk), .rst(rst),
@@ -252,8 +253,9 @@ assign				mbist_so_o = mbist_tag_so;
 	.sbdc_ci_o(sbdc_ci_o),
 	.sbdc_data_i(sbdc_data_i),
 	.sbdc_ack_i(sbdc_ack_i),
-	.sbdc_err_i(sbdc_err_i)
+	.sbdc_err_i(sbdc_err_i),
 	//.sbdc_tag_i(sbdc_tag_i)
+	.hit_sb(hit_sb)
   );
 
    
@@ -345,7 +347,9 @@ always @(tag or dcqmem_adr_i_tag or tag_v) begin
 		tagcomp_miss = 1'b0;
 end
 
-
+   wire tag_and_sb_miss;
+   assign tag_and_sb_miss = tagcomp_miss & (!hit_sb);
+   
 
    
 //
@@ -359,7 +363,7 @@ or1200_dc_fsm or1200_dc_fsm(
 	.dcqmem_ci_i(sbdc_ci_o),
 	.dcqmem_we_i(sbdc_we_o),
 	.dcqmem_sel_i(sbdc_sel_o),
-	.tagcomp_miss(tagcomp_miss),
+	.tagcomp_miss(tag_and_sb_miss),
 	.tag(tag),
         .tag_v(tag_v),
 	.dirty(dirty),
