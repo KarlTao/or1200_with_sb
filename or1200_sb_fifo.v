@@ -69,8 +69,8 @@ module or1200_sb_fifo(
 );
 
    parameter dw = 32+4+32+1; //addr, sel, data, ci (no tag) //68;
-   parameter fw = `OR1200_SB_LOG;
-   parameter fl = `OR1200_SB_ENTRIES;
+   parameter fw = 4;//`OR1200_SB_LOG;
+   parameter fl = 1<<fw;//`OR1200_SB_ENTRIES;
 
 //
 // FIFO signals
@@ -102,14 +102,20 @@ reg			full_o;
 //
    output  reg 		sb_hit;
    output reg [31:0] 	hit_data_o;
-   reg [fl-1:0] 	addr_hit;
-   reg [fl-1:0] 	rotated_addr_hit; //each bit means fifo entry addr match
+   reg [fl-1:0] 	addr_hit, sel_hit;
+   reg [fl-1:0] 	shift_addr_hit, shift_sel_hit, addrhit_selmiss, addrhit_selhit; 
    reg [fw-1:0] 	hit_pntr;
    reg [fl-1:0] 	mask;
- 	 
+   integer 		i, addrhit_selmiss_h, addrhit_selhit_h; 
    always @ (*) begin
-   //each bit means that entry's addr matches ld_addr
-      if ((mem[0][63:32] == dat_i[63:32]) 
+   //each bit means that entry's addr matches ld_addr      
+      for (i=0; i<fl; i=i+1) begin
+	 if (mem[i][63:32] == dat_i[63:32]) addr_hit[i] = 1;
+	 else addr_hit[i] = 0;
+	 if (mem[i][67:64] & dat_i[67:64] == dat_i[67:64]) sel_hit[i] = 1;
+	 else sel_hit[i] = 0;
+      end
+/*      if ((mem[0][63:32] == dat_i[63:32]) 
 	  && (mem[0][67:64] & dat_i[67:64] == dat_i[67:64])) addr_hit[0] = 1;
       else addr_hit[0] = 0;
       if ((mem[1][63:32] == dat_i[63:32])
@@ -121,25 +127,37 @@ reg			full_o;
       if ((mem[3][63:32] == dat_i[63:32])
 	  && (mem[3][67:64] & dat_i[67:64] == dat_i[67:64])) addr_hit[3] = 1;
       else addr_hit[3] = 0;
-      
+  */    
       //generate mask according to cntr
+      for (i=0; i<fl; i=i+1) begin
+	 if (i<cntr) mask[i] = 1;
+	 else mask[i] = 0;
+      end
+      /*
       case (cntr)
 	4: mask = 4'b1111;
 	3: mask = 4'b0111;
 	2: mask = 4'b0011;
 	1: mask = 4'b0001;
 	default : mask = 4'b0000;
-      endcase // case (cntr)
-      
-      //rotate to rd_pntr at lowest bit, and larger thatn wr_pntr bits to 0
-      rotated_addr_hit = ((addr_hit>>rd_pntr) + (addr_hit<<(fl-rd_pntr))) & mask; 
-
-      sb_hit = | rotated_addr_hit;
-
+      endcase // case (cntr)*/
+      //shift to make rd_pntr at lowest bit, and larger than wr_pntr bits mask to 0
+      shift_addr_hit = ((addr_hit>>rd_pntr) + (addr_hit<<(fl-rd_pntr))) & mask;
+      shift_sel_hit = ((sel_hit>>rd_pntr) + (sel_hit<<(fl-rd_pntr))) & mask; 
+      addrhit_selhit = shift_addr_hit & shift_sel_hit;
+      addrhit_selmiss = shift_addr_hit & (~shift_sel_hit);
       //decide the highest bit that is 1, 
-      if (rotated_addr_hit[3] == 1) begin
-	 hit_pntr = (3+rd_pntr)%fl;
+      addrhit_selhit_h = -1;
+      addrhit_selmiss_h = -1;
+      for (i=0; i<fl; i=i+1) begin
+	 if (addrhit_selhit[i] == 1) begin
+	    addrhit_selhit_h = i;//(i+rd_pntr)%fl;
+	 end
+	 if (addrhit_selmiss[i] == 1) begin
+	    addrhit_selmiss_h = i;//(i+rd_pntr)%fl;
+	 end
       end
+      /*
       else if (rotated_addr_hit[2] == 1) begin
 	 hit_pntr = (2+rd_pntr)%fl;
       end
@@ -152,7 +170,9 @@ reg			full_o;
       else begin
 	 hit_pntr = 0;
       end
-      
+      */
+      hit_pntr = (addrhit_selhit_h+rd_pntr)%fl;
+      sb_hit = ((addrhit_selhit_h >= 0) && (addrhit_selhit_h > addrhit_selmiss_h));
       hit_data_o = mem[hit_pntr][31:0];
    end
    
